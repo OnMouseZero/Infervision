@@ -1,0 +1,17 @@
+内核：Linux tx-deepocean 5.3.0-64-generic #58~18.04.1-Ubuntu SMP Tue Jul 14 03:14:44 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
+docker 版本：Server Version: 18.06.0-ce
+docker-compose版本：docker-compose version 1.27.4, build 40524192
+
+##TX的harbor仓库版本
+wget -c   https://ghproxy.com/  https://github.com/goharbor/harbor/releases/download/v2.8.3/harbor-offline-installer-v2.8.3.tgz
+
+##gitlab的版本
+sameersbn/gitlab:15.9.7
+sameersbn/gitlab:16.6.6
+gitlab-runner:16.7.0（并发数设置为30）
+
+##使用helm下载gitlab-runner
+helm repo add gitlab https://charts.gitlab.io
+helm repo update
+helm search repo -l gitlab/gitlab-runner
+helm pull gitlab/gitlab-runner

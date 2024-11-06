@@ -1,0 +1,18 @@
+{
+"bip": "8.8.1.1/24",
+"default-address-pools":
+    [
+        {"base":"8.8.0.0/16","size":24}
+    ],
+"runtimes": {
+    "nvidia": {
+        "path": "/usr/bin/nvidia-container-runtime",
+        "runtimeArgs": []
+    }
+}
+}
+
+系统内核版本：Linux txdeepocean 5.3.0-64-generic #58~18.04.1-Ubuntu SMP Tue Jul 14 03:14:44 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux
+
+NVIDIA-SMI 495.44       Driver Version: 495.44       CUDA Version: 11.5
+
