@@ -1,0 +1,95 @@
+#配制yum环境
+vim  ceph.repo
+[Ceph]
+name=Ceph packages for $basearch
+baseurl=http://mirrors.aliyun.com/ceph/rpm-luminous/el7/$basearch
+enabled=1
+gpgcheck=0
+type=rpm-md
+gpgkey=https://mirrors.aliyun.com/ceph/keys/release.asc
+priority=1
+[Ceph-noarch]
+name=Ceph noarch packages
+baseurl=http://mirrors.aliyun.com/ceph/rpm-luminous/el7/noarch
+enabled=1
+gpgcheck=0
+type=rpm-md
+gpgkey=https://mirrors.aliyun.com/ceph/keys/release.asc
+priority=1
+[ceph-source]
+name=Ceph source packages
+baseurl=http://mirrors.aliyun.com/ceph/rpm-luminous/el7/SRPMS
+enabled=1
+gpgcheck=0
+type=rpm-md
+gpgkey=https://mirrors.aliyun.com/ceph/keys/release.asc
+priority=1
+
+#安装ceph工具
+  yum -y install ceph ceph-radosgw ceph-deploy
+
+#前提需要免密登录ssh
+#初始化集群
+  ceph-deploy new ceph-node1 ceph-node2 ceph-node3
+
+#初始化三个monitor，接下来我们创建monitor
+  ceph-deploy mon create-initial
+#mon create-initial会根据ceph.conf进行创建mon，判断monitor都创建成功后，会进行keyring的收集，这些keyring在后续创建其他成员的时候要用到
+
+#接下来我们分发集群keyring
+  ceph-deploy admin ceph-node1 ceph-node2 ceph-node3
+
+#创建mgr
+  ceph-deploy mgr create ceph-node1 ceph-node2 ceph-node3
+
+#接下来可以开始创建osd了
+  ceph-deploy osd create --data  /dev/sdd ceph01     或者   ceph-deploy osd prepare monster:/data/ceph0  &&  ceph-deploy osd activate monster:/data/ceph0
+  ceph-deploy osd create --data  /dev/sdd ceph02
+  ceph-deploy osd create --data  /dev/sdd test
+
+#创建pool存储池     #PG概念和用法
+  ceph  osd    pool create testpool   150 150
+      ceph osd pool set  testpool    pgp_num 150
+  ceph  osd    pool set testpool   size 2   #设置存储池副本数为2
+
+  #创建rbd资源
+     rbd create   testpool/ldongrbd  --size  2G（弃用）
+     ##PG的数量应与OSD的数量成正比。常见的建议是每个OSD有大约100到200个PG
+               PG数=OSD数×100/副本数     PG数=3×100/2≈150
+
+    #在存储池中启用rdb资源
+      ceph osd pool application enable   testpool   rbd
+    #初始化rbd
+       rbd pool init -p   testpool
+    #创建rdb的img镜像，并指定image-fomat的版本（#镜像文件格式版本2或1）
+      rbd create rbd-img1 --size 2G --pool   testpool   --image-format 2 --image-feature layering  
+      rbd create rbd-img1 --size 2G --pool   testpool   --image-format 1
+                             rbd rm       testpool/ldongrbd
+           #设置镜像的特性
+              #rbd feature enable exclusive-lock --pool testpool --image rbd-img1
+              #rbd feature enable object-map --pool testpool   --image rbd-img1
+              #rbd feature enable fast-diff --pool testpool   --image rbd-img1
+              #rbd feature disable exclusive-lock --pool testpool   --image rbd-img1
+    #再客户端映射img镜像
+      rbd -p   testpool   map rbd-img1   #重新挂载磁盘，让lsblk读得到块存储
+
+
+####创建cephFS存储pool资源池
+    #需要先创建mds
+        ceph-deploy mds create ceph01 ceph02
+
+    ceph  osd    pool   create  cephfs_metadata  150 150
+    ceph  osd    pool   set cephfs_metadata  size 2   #设置存储池副本数为2
+    ceph  osd    pool   create  cephfs_data        150 150
+    ceph  osd    pool   set cephfs_data     size 2   #设置存储池副本数为2
+
+    #在新创建的存储池基础上创建cephFS的文件系统
+    ceph fs new cephfs-demo cephfs_metadata cephfs_data
+
+    ##挂载cephFS系统
+    mount  -t  ceph   192.168.220.15:6789,192.168.220.12:6789,192.168.220.5:/  /mnt/cephFS/  -o  name=admin,secret=xxxx
+
+
+
+
+
